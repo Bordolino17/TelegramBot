@@ -1,0 +1,7 @@
+requests
+flask
+python-telegram-bot
+apscheduler
+bs4
+sqlalchemy
+psycopg2
