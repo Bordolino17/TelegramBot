@@ -1,7 +1,6 @@
 import requests
 import os
 from apscheduler.schedulers.blocking import BlockingScheduler
-from flask import Flask , request
 from dolar import get_dolar
 from subte import get_estado
 from telegram.ext import Updater , CommandHandler,InlineQueryHandler,Filters,MessageHandler
@@ -18,11 +17,6 @@ db = create_engine(os.environ["DATABASE_URL"])
 res = db.execute("SELECT * from suscriptores")
 SUSCRIPTORES = [suscriptor for suc in res for suscriptor in suc]
 
-# if os.path.isfile("suscriptos.txt"):
-    # with open("suscriptos.txt","r") as f:
-        # suscriptores = f.readlines()
-        # for suscriber in suscriptores:
-            # SUSCRIPTORES.append(suscriber.replace("\n",""))
 
 if os.path.isfile("dolar.txt"):
     with open("dolar.txt","r") as f:
@@ -196,5 +190,4 @@ if __name__ == "__main__":
     updater.bot.set_webhook("URLwebhook" + os.environ["BOT_KEY"]) #--> donde va a estar hosteado
     tarea.start()
     updater.idle()
-    # port = int(os.environ.get("PORT", 5000))
-    # app.run(host="0.0.0.0", port=port, debug = True)
+
