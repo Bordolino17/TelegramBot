@@ -3,9 +3,13 @@ import os
 from apscheduler.schedulers.blocking import BlockingScheduler
 from dolar import get_dolar
 from subte import get_estado
+from coronavirus import get_coronavirus
+from feriado import es_feriado
 from telegram.ext import Updater , CommandHandler,InlineQueryHandler,Filters,MessageHandler
 import telegram.ext
 from sqlalchemy import create_engine
+from youtube import get_mp3
+import glob
 
 
 
@@ -60,6 +64,7 @@ def dolar (update, context):
         Da la cotizacion de dolar oficial y blue la saco de la api de bluelytics 
     '''
     datos = get_dolar()
+    impuesto = round(float(datos["oficial_venta"])*.30 + (float(datos["oficial_venta"])*.35),2)
     dolar = "{}!!\nDolar Oficial\n"\
                 "Compra: ${}\n"\
                 "Venta: ${}\n"\
@@ -68,7 +73,7 @@ def dolar (update, context):
                 "Venta: ${}\n"\
                 "Dolar Tarjeta: ${}"\
             .format(update.message.chat.first_name,str(datos["oficial_compra"]),str(datos["oficial_venta"]),\
-                str(round(float(datos["blue_compra"]),2)),str(datos["blue_venta"]),str(float(datos["oficial_venta"])*1.30))
+                str(round(float(datos["blue_compra"]),2)),str(datos["blue_venta"]),str(round(float(datos["oficial_venta"])+impuesto,2)))
     context.bot.send_message(chat_id=update.message.chat_id, text=dolar)
     if not suscriptor(update.message.chat_id):
         suscribir(update, context)
@@ -136,11 +141,14 @@ def programar():
     '''
         Envia la tarea segun el cron 
     '''
+    if es_feriado():
+        return
     global ULTIMOVALOR
     datos = get_dolar()
     if ULTIMOVALOR == False:
         ULTIMOVALOR = float(datos["oficial_venta"])
     porc = ((float(datos["oficial_venta"])/ULTIMOVALOR)* 100) - 100
+    impuesto = round(float(datos["oficial_venta"])*.30 + (float(datos["oficial_venta"])*.35),2)
     dolar = "Dolar Oficial\n"\
                 "Compra: ${} \n"\
                 "Venta: ${} | Var: %{}\n"\
@@ -149,7 +157,7 @@ def programar():
                 "Venta: ${}\n"\
                 "Dolar Tarjeta: ${}"\
             .format(str(datos["oficial_compra"]),str(datos["oficial_venta"]),round(porc,2),\
-            datos["blue_compra"],datos["blue_venta"],(float(datos["oficial_venta"])*1.30))
+            datos["blue_compra"],datos["blue_venta"],(round(float(datos["oficial_venta"])+impuesto,2)))
     with open("dolar.txt","w") as f:
         f.write(datos["oficial_venta"])	
     ULTIMOVALOR = float(datos["oficial_venta"])
@@ -170,6 +178,34 @@ def subte(update, context):
         except:
             texto ="Linea no valida"
     context.bot.send_message(chat_id=update.message.chat_id, text=texto)
+    
+    def coronavirus(update, context):
+    '''
+        envia informacion sobre coronavirus en argentina
+    '''
+    
+    texto = get_coronavirus()
+    context.bot.send_message(chat_id=update.message.chat_id, text=texto)
+
+def youtube(update, context):
+    '''
+        descarga el audio del link de youtube en .mp3
+    '''
+    link = " ".join(context.args)
+    if link == '':
+        texto = "Debe escribir /youtube link Recuerde que se descargara solamente el mp3 del video\n\
+                 No envie video mayor a 10 minutos \
+                \n Gracias." 
+    else:
+        try:
+            get_mp3(link)
+            mp3 = glob.glob('*.mp3')[0]
+            context.bot.send_audio(chat_id=update.message.chat_id,audio=open(mp3,'rb'))
+            texto = "Audio Enviado"
+            os.remove(mp3)
+        except:
+            texto = "Hubo un error al descargar el Audio"
+    context.bot.send_message(chat_id=update.message.chat_id, text=texto)
 
 if __name__ == "__main__":
     updater = Updater(token=os.environ["BOT_KEY"],use_context=True)
@@ -180,6 +216,8 @@ if __name__ == "__main__":
     dispatcher.add_handler(CommandHandler('desuscribir',desuscribir))
     dispatcher.add_handler(CommandHandler('ping',ping))
     dispatcher.add_handler(CommandHandler('subte',subte))
+    dispatcher.add_handler(CommandHandler('coronavirus',coronavirus))
+    dispatcher.add_handler(CommandHandler('youtube',youtube))
     dispatcher.add_handler(MessageHandler(Filters.text, echo))
     tarea.add_job(programar, 'cron', month='1-12', day_of_week='mon-fri',hour='10-16')
     port = int(os.environ.get("PORT", 5000))
