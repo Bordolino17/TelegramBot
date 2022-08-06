@@ -64,7 +64,7 @@ def dolar (update, context):
         Da la cotizacion de dolar oficial y blue la saco de la api de bluelytics 
     '''
     datos = get_dolar()
-    impuesto = round(float(datos["oficial_venta"])*.30 + (float(datos["oficial_venta"])*.35),2)
+    impuesto = round(float(datos["oficial_venta"])*.30 + (float(datos["oficial_venta"])*.35),2) + (float(datos["oficial_venta"])*.10),2)
     dolar = "{}!!\nDolar Oficial\n"\
                 "Compra: ${}\n"\
                 "Venta: ${}\n"\
